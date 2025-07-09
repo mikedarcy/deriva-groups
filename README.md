@@ -1,2 +1,2 @@
-# credenza-groups
-Groups service for the Credenza system 
+# deriva-groups
+Groups service for the DERIVA platform 
