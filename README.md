@@ -1,2 +1,2 @@
 # deriva-groups
-Groups service for the DERIVA platform 
+Groups web service for the DERIVA platform 

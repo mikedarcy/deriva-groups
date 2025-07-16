@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deriva-groups"
+version = "0.1"
+description = "Group Management Web Service for the DERIVA platform"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "USC Information Sciences Institute ISR Division", email = "isrd-support@isi.edu" }
+]
+urls = { Homepage = "https://github.com/informatics-isi-edu/deriva-groups" }
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Internet :: Security"
+]
+dependencies = [
+  "flask",
+  "flask-cors",
+  "requests",
+  "tzlocal",
+  "redis",
+  "valkey",
+  "python-dotenv",
+  "python-json-logger"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "requests-mock",
+  "fakeredis"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["deriva.*"]
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.pytest.ini_options]
+minversion = "6.2"
+addopts = "-vv -r w --tb=short --disable-warnings --cov=deriva-groups --cov-report=term-missing --cov-config=.coveragerc"
+filterwarnings = [
+  "always"
+]
+testpaths = [
+  "test"
+]
+
+[tool.tox]
+env_list = ["py"]
+
+[tool.tox.env.py]
+deps = [".[dev]"]
+commands = [
+  ["pytest", "{posargs}"]
+]

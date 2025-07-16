@@ -1,0 +1,4 @@
+[run]
+omit =
+    deriva-groups/app.py
+    deriva-groups/telemetry/metrics/*
