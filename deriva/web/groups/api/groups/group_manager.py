@@ -31,7 +31,7 @@ class GroupManager:
 
     # Group management
     def create_group(self, name: str, description: str = "", visibility: str = "private",
-                    created_by: str = "", metadata: Dict = None) -> Group:
+                     created_by: str = "", metadata: Dict = None) -> Group:
         """Create a new group"""
         group = Group(
             id=Group.generate_id(),
@@ -48,13 +48,13 @@ class GroupManager:
         """Get a group by ID"""
         return self.store.get_group(group_id)
 
-    def update_group(self, group_id: str, name: str = None, description: str = None, 
-                    visibility: str = None, metadata: Dict = None) -> Optional[Group]:
+    def update_group(self, group_id: str, name: str = None, description: str = None,
+                     visibility: str = None, metadata: Dict = None) -> Optional[Group]:
         """Update a group"""
         group = self.store.get_group(group_id)
         if not group:
             return None
-        
+
         if name is not None:
             group.name = name
         if description is not None:
@@ -63,7 +63,7 @@ class GroupManager:
             group.visibility = visibility
         if metadata is not None:
             group.metadata = metadata
-        
+
         group.updated_at = time.time()
         self.store.update_group(group)
         return group
@@ -91,19 +91,19 @@ class GroupManager:
         return result
 
     # Membership management
-    def add_member(self, group_id: str, user_id: str, user_email: str, role: GroupRole, 
-                  added_by: str = "", metadata: Dict = None) -> Optional[GroupMembership]:
+    def add_member(self, group_id: str, user_id: str, user_email: str, role: GroupRole,
+                   added_by: str = "", metadata: Dict = None) -> Optional[GroupMembership]:
         """Add a member to a group"""
         # Check if group exists
         group = self.store.get_group(group_id)
         if not group:
             return None
-        
+
         # Check if user is already a member
         existing_membership = self.store.get_membership(group_id, user_id)
         if existing_membership:
             return None
-        
+
         membership = GroupMembership(
             group_id=group_id,
             user_id=user_id,
@@ -120,7 +120,7 @@ class GroupManager:
         membership = self.store.get_membership(group_id, user_id)
         if not membership:
             return None
-        
+
         membership.role = new_role
         self.store.update_membership(membership)
         return membership
@@ -130,7 +130,7 @@ class GroupManager:
         membership = self.store.get_membership(group_id, user_id)
         if not membership:
             return False
-        
+
         self.store.remove_membership(group_id, user_id)
         return True
 
@@ -147,46 +147,46 @@ class GroupManager:
         membership = self.store.get_membership(group_id, user_id)
         if not membership:
             return None
-        
+
         if required_role is None:
             return membership.role
-        
+
         # Role hierarchy: ADMINISTRATOR > MANAGER > MEMBER
         role_hierarchy = {
             GroupRole.MEMBER: 1,
             GroupRole.MANAGER: 2,
             GroupRole.ADMINISTRATOR: 3
         }
-        
+
         user_level = role_hierarchy.get(membership.role, 0)
         required_level = role_hierarchy.get(required_role, 0)
-        
+
         return membership.role if user_level >= required_level else None
 
     # Invitation management
-    def create_invitation(self, group_id: str, email: str, role: GroupRole, 
-                         invited_by: str = "", base_url: str = "", 
-                         invited_by_name: str = "Administrator") -> Optional[GroupInvitation]:
+    def create_invitation(self, group_id: str, email: str, role: GroupRole,
+                          invited_by: str = "", base_url: str = "",
+                          invited_by_name: str = "Administrator") -> Optional[GroupInvitation]:
         """Create and send a group invitation"""
         # Check if group exists
         group = self.store.get_group(group_id)
         if not group:
             return None
-        
+
         # Check if user is already a member (by email lookup in existing memberships)
         group_members = self.store.get_group_memberships(group_id)
         for member in group_members:
             if member.user_email.lower() == email.lower():
                 logger.warning(f"User {email} is already a member of group {group_id}")
                 return None
-        
+
         # Check for existing pending invitation
         existing_invitations = self.store.get_user_invitations(email)
         for inv in existing_invitations:
             if inv.group_id == group_id and inv.is_valid():
                 logger.warning(f"User {email} already has a pending invitation to group {group_id}")
                 return None
-        
+
         invitation = GroupInvitation(
             id=GroupInvitation.generate_id(),
             group_id=group_id,
@@ -196,7 +196,7 @@ class GroupManager:
             token=GroupInvitation.generate_token(),
             invited_by=invited_by
         )
-        
+
         self.store.create_invitation(invitation)
         self.send_invitation(base_url, invitation, invited_by_name)
 
@@ -205,9 +205,11 @@ class GroupManager:
     def send_invitation(self, base_url, invitation: GroupInvitation, invited_by_name) -> bool:
         if not self.email_service:
             logger.debug(f"Email service not configured or unavailable")
+            return False
 
         if not base_url:
             logger.debug(f"Base URL not configured. Email cannot be sent")
+            return False
 
         group_id = invitation.group_id
         email = invitation.email
@@ -218,25 +220,29 @@ class GroupManager:
             logger.debug(f"Not sending email for unknown group {group_id}")
             return False
 
-        if self.email_service.send_invitation_email(invitation, group, base_url, invited_by_name):
-            logger.info(f"Invitation email sent to {email} for group {group.name}")
-            return True
-        else:
+        try:
+            if self.email_service.send_invitation_email(invitation, group, base_url, invited_by_name):
+                logger.info(f"Invitation email sent to {email} for group {group.name}")
+                return True
+            else:
+                invitation.status = InvitationStatus.FAILED
+                return False
+        except Exception as e:
+            logger.error(f"Failed to send invitation email: {e}")
             invitation.status = InvitationStatus.FAILED
-
-        return False
+            return False
 
     def accept_invitation(self, token: str, user_id: str, user_email: str) -> Optional[GroupMembership]:
         """Accept an invitation and add user to group"""
         invitation = self.store.get_invitation_by_token(token)
         if not invitation or not invitation.is_valid():
             return None
-        
+
         # Verify email matches (case insensitive)
         if invitation.email.lower() != user_email.lower():
             logger.warning(f"Email mismatch for invitation {invitation.id}: {invitation.email} != {user_email}")
             return None
-        
+
         # Add user to group
         membership = self.add_member(
             group_id=invitation.group_id,
@@ -246,17 +252,17 @@ class GroupManager:
             added_by=invitation.invited_by,
             metadata={"invitation_id": invitation.id}
         )
-        
+
         if membership:
             # Mark invitation as accepted
             invitation.status = InvitationStatus.ACCEPTED
             invitation.accepted_at = time.time()
             invitation.accepted_by = user_id
             self.store.update_invitation(invitation)
-            
+
             logger.info(f"User {user_id} ({user_email}) accepted invitation to group "
                         f"{invitation.group_id} ({invitation.group_name})")
-        
+
         return membership
 
     def revoke_invitation(self, invitation_id: str) -> bool:
@@ -264,7 +270,7 @@ class GroupManager:
         invitation = self.store.get_invitation(invitation_id)
         if not invitation:
             return False
-        
+
         invitation.status = InvitationStatus.REVOKED
         self.store.update_invitation(invitation)
         return True
@@ -303,16 +309,16 @@ class GroupManager:
         group = self.store.get_group(group_id)
         if not group:
             return None
-        
+
         members = self.store.get_group_memberships(group_id)
         invitations = self.store.get_group_invitations(group_id)
         pending_invitations = [inv for inv in invitations if inv.is_valid()]
-        
+
         # Count members by role
         role_counts = {role.value: 0 for role in GroupRole}
         for member in members:
             role_counts[member.role.value] += 1
-        
+
         return {
             "group": group.to_dict(),
             "member_count": len(members),

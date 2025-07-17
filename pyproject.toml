@@ -55,7 +55,7 @@ zip-safe = false
 
 [tool.pytest.ini_options]
 minversion = "6.2"
-addopts = "-vv -r w --tb=short --disable-warnings --cov=deriva-groups --cov-report=term-missing --cov-config=.coveragerc"
+addopts = "-vv -r w --tb=short --disable-warnings --cov=deriva --cov-report=term-missing --cov-config=.coveragerc"
 filterwarnings = [
   "always"
 ]

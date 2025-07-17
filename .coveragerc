@@ -1,4 +1,5 @@
 [run]
+source = deriva
 omit =
-    deriva-groups/app.py
-    deriva-groups/telemetry/metrics/*
+    deriva/web/groups/app.py
+    deriva/web/groups/telemetry/*
